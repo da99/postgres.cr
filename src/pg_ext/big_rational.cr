@@ -17,11 +17,11 @@ module Postgres
 
   class ResultSet
     def read(t : BigRational.class)
-      read(PG::Numeric).to_big_r
+      read(Postgres::Numeric).to_big_r
     end
 
     def read(t : BigRational?.class)
-      read(PG::Numeric?).try &.to_big_r
+      read(Postgres::Numeric?).try &.to_big_r
     end
   end
 end

@@ -5,13 +5,13 @@ DB_URL = ENV["DATABASE_URL"]? || "postgres:///"
 PG_DB  = DB.open(DB_URL)
 
 def with_db
-  DB.open(DB_URL) do |db|
+  Postgres.open(DB_URL) do |db|
     yield db
   end
 end
 
 def with_connection
-  DB.connect(DB_URL) do |conn|
+  Postgres.connect(DB_URL) do |conn|
     yield conn
   end
 end
@@ -38,4 +38,4 @@ def test_decode(name, query, expected, file = __FILE__, line = __LINE__)
   end
 end
 
-require "./*"
+# require "./*"

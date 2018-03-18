@@ -1,5 +1,5 @@
 
-describe PG::Decoders do
+describe Postgres::Decoders do
   test_decode "array", "'{}'::integer[]", [] of Int32
   test_decode "array", "ARRAY[9]", [9]
   test_decode "array", "ARRAY[8,9]", [8, 9]
@@ -41,13 +41,13 @@ describe PG::Decoders do
   end
 
   it "raises when reading null in non-null array" do
-    expect_raises(PG::RuntimeError) do
+    expect_raises(Postgres::RuntimeError) do
       PG_DB.query_one("select '{1,2,3,null}'::integer[]", &.read(Array(Int32)))
     end
   end
 
   it "errors on negative lower bounds" do
-    expect_raises(PG::RuntimeError) do
+    expect_raises(Postgres::RuntimeError) do
       PG_DB.query_one("select '[-2:-0]={1,2,3}'::integer[]", &.read)
     end
   end

@@ -1,5 +1,5 @@
 
-describe PG::Connection, "#initialize" do
+describe Postgres::Connection, "#initialize" do
   it "raises on bad connections" do
     expect_raises(DB::ConnectionRefused) {
       DB.open("postgres://localhost:5433")
@@ -7,7 +7,7 @@ describe PG::Connection, "#initialize" do
   end
 end
 
-describe PG::Connection, "#on_notice" do
+describe Postgres::Connection, "#on_notice" do
   it "sends notices to on_notice" do
     last_notice = nil
     PG_DB.using_connection do |conn|
@@ -32,7 +32,7 @@ describe PG::Connection, "#on_notice" do
   end
 end
 
-describe PG::Connection, "#on_notification" do
+describe Postgres::Connection, "#on_notification" do
   it "does listen/notify within same connection" do
     last_note = nil
     with_db do |db|

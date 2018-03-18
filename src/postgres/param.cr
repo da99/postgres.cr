@@ -22,27 +22,27 @@ module Postgres
       text val.to_s(ISO_8601)
     end
 
-    def self.encode(val : PG::Geo::Point)
+    def self.encode(val : Postgres::Geo::Point)
       text "(#{val.x},#{val.y})"
     end
 
-    def self.encode(val : PG::Geo::Line)
+    def self.encode(val : Postgres::Geo::Line)
       text "{#{val.a},#{val.b},#{val.c}}"
     end
 
-    def self.encode(val : PG::Geo::Circle)
+    def self.encode(val : Postgres::Geo::Circle)
       text "<(#{val.x},#{val.y}),#{val.radius}>"
     end
 
-    def self.encode(val : PG::Geo::LineSegment)
+    def self.encode(val : Postgres::Geo::LineSegment)
       text "((#{val.x1},#{val.y1}),(#{val.x2},#{val.y2}))"
     end
 
-    def self.encode(val : PG::Geo::Box)
+    def self.encode(val : Postgres::Geo::Box)
       text "((#{val.x1},#{val.y1}),(#{val.x2},#{val.y2}))"
     end
 
-    def self.encode(val : PG::Geo::Path)
+    def self.encode(val : Postgres::Geo::Path)
       if val.closed?
         encode_points "(", val.points, ")"
       else
@@ -50,7 +50,7 @@ module Postgres
       end
     end
 
-    def self.encode(val : PG::Geo::Polygon)
+    def self.encode(val : Postgres::Geo::Polygon)
       encode_points "(", val.points, ")"
     end
 

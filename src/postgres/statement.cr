@@ -1,8 +1,73 @@
 
 
-class Postgres::Statement < ::DB::Statement
-  def initialize(connection, @sql : String)
-    super(connection)
+class Postgres::Statement
+
+  @closed = false
+
+  getter connection : Connection
+  def initialize(@connection, @sql : String)
+  end
+
+  # Closes this object.
+  def close
+    return if @closed
+    do_close
+    @closed = true
+  end
+
+  # Returns `true` if this object is closed. See `#close`.
+  def closed?
+    @closed
+  end
+
+  def release_connection
+    @connection.release_from_statement
+  end
+
+  # See `QueryMethods#exec`
+  def exec
+    perform_exec_and_release(Slice(Any).empty)
+  end
+
+  # See `QueryMethods#exec`
+  def exec(args : Array)
+    perform_exec_and_release(args)
+  end
+
+  # See `QueryMethods#exec`
+  def exec(*args)
+    # TODO better way to do it
+    perform_exec_and_release(args)
+  end
+
+  # See `QueryMethods#query`
+  def query
+    perform_query_with_rescue Tuple.new
+  end
+
+  # See `QueryMethods#query`
+  def query(args : Array)
+    perform_query_with_rescue args
+  end
+
+  # See `QueryMethods#query`
+  def query(*args)
+    perform_query_with_rescue args
+  end
+
+  private def perform_exec_and_release(args : Enumerable) : ExecResult
+    return perform_exec(args)
+  ensure
+    release_connection
+  end
+
+  private def perform_query_with_rescue(args : Enumerable) : ResultSet
+    return perform_query(args)
+  rescue e : Exception
+    # Release connection only when an exception occurs during the query
+    # execution since we need the connection open while the ResultSet is open
+    release_connection
+    raise e
   end
 
   protected def conn

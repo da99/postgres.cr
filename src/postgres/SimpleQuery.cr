@@ -1,6 +1,5 @@
 
 module Postgres
-  # :nodoc:
   class SimpleQuery
     getter conn, query
 

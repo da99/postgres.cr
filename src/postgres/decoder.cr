@@ -1,6 +1,6 @@
 
 module Postgres
-  alias PGValue = String | Nil | Bool | Int32 | Float32 | Float64 | Time | JSON::Type | PG::Numeric
+  alias PGValue = String | Nil | Bool | Int32 | Float32 | Float64 | Time | JSON::Type | Postgres::Numeric
 
   # :nodoc:
   module Decoders
@@ -290,11 +290,11 @@ module Postgres
         sign = read_i16(io)
         dscale = read_i16(io)
         digits = (0...ndigits).map { |i| read_i16(io) }
-        PG::Numeric.new(ndigits, weight, sign, dscale, digits)
+        Postgres::Numeric.new(ndigits, weight, sign, dscale, digits)
       end
     end
 
-    @@decoders = Hash(Int32, PG::Decoders::Decoder).new(ByteaDecoder.new)
+    @@decoders = Hash(Int32, Postgres::Decoders::Decoder).new(ByteaDecoder.new)
 
     def self.from_oid(oid)
       @@decoders[oid]

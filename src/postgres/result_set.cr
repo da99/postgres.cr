@@ -93,7 +93,7 @@ class Postgres::ResultSet
 
   def read(t : Array(T).class) : Array(T) forall T
     read_array(Array(T)) do
-      raise PG::RuntimeError.new("unexpected NULL")
+      raise Postgres::RuntimeError.new("unexpected NULL")
     end
   end
 

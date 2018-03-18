@@ -55,24 +55,6 @@ module Postgres
       end
     end
 
-    struct ErrorResponse < ErrorNoticeFrame
-    end
-
-    struct NoticeResponse < ErrorNoticeFrame
-    end
-
-    struct NoData < Frame
-    end
-
-    struct ParseComplete < Frame
-    end
-
-    struct BindComplete < Frame
-    end
-
-    struct EmptyQueryResponse < Frame
-    end
-
 
     struct Authentication < Frame
       enum Type : Int32
@@ -238,5 +220,24 @@ module Postgres
         command.split.last.to_i64? || 0_i64
       end
     end
+
+    struct ErrorResponse < ErrorNoticeFrame
+    end
+
+    struct NoticeResponse < ErrorNoticeFrame
+    end
+
+    struct NoData < Frame
+    end
+
+    struct ParseComplete < Frame
+    end
+
+    struct BindComplete < Frame
+    end
+
+    struct EmptyQueryResponse < Frame
+    end
+
   end
 end

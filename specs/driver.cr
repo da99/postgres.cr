@@ -12,9 +12,9 @@ struct StructWithMapping
   DB.mapping(a: Int32, b: Int32)
 end
 
-describe PG::Driver do
+describe Postgres::Driver do
   it "should register postgres name" do
-    DB.driver_class("postgres").should eq(PG::Driver)
+    DB.driver_class("postgres").should eq(Postgres::Driver)
   end
 
   it "exectes and selects value" do
@@ -155,7 +155,7 @@ describe PG::Driver do
       no_nulls = StructWithMapping.from_rs(PG_DB.query("select 1 as a, 1 as b")).first
       {no_nulls.a, no_nulls.b}.should eq({1, 1})
 
-      message = "PG::ResultSet#read returned a Nil. A Int32 was expected."
+      message = "Postgres::ResultSet#read returned a Nil. A Int32 was expected."
       expect_raises(Exception, message) do
         StructWithMapping.from_rs(PG_DB.query("select 2 as a, null as b"))
       end

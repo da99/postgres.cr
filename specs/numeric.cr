@@ -1,7 +1,7 @@
 require "../../src/pg_ext/big_rational"
 
 private def n(nd, w, s, ds, d)
-  PG::Numeric.new(nd.to_i16, w.to_i16, s.to_i16, ds.to_i16, d.map(&.to_i16))
+  Postgres::Numeric.new(nd.to_i16, w.to_i16, s.to_i16, ds.to_i16, d.map(&.to_i16))
 end
 
 private def br(n, d)
@@ -59,7 +59,7 @@ private def ex(which)
   end
 end
 
-describe PG::Numeric do
+describe Postgres::Numeric do
   it "#to_f" do
     [
       {"nan", 0_f64},

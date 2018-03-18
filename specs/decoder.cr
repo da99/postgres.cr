@@ -1,5 +1,5 @@
 
-describe PG::Decoders do
+describe Postgres::Decoders do
   #           name,             sql,              result
   test_decode "undefined    ", "'what'       ", "what"
   test_decode "text         ", "'what'::text ", "what"
@@ -51,7 +51,7 @@ describe PG::Decoders do
 
   it "numeric" do
     x = ->(q : String) do
-      PG_DB.query_one "select '#{q}'::numeric", &.read(PG::Numeric)
+      PG_DB.query_one "select '#{q}'::numeric", &.read(Postgres::Numeric)
     end
     x.call("1.3").to_f.should eq(1.3)
     x.call("nan").nan?.should be_true
@@ -63,14 +63,14 @@ describe PG::Decoders do
   test_decode "bpchar", %('c'::char(5)), "c    "
   test_decode "name", %('hi'::name), "hi"
   test_decode "oid", %(2147483648::oid), 2147483648_u32
-  test_decode "point", "'(1.2,3.4)'::point", PG::Geo::Point.new(1.2, 3.4)
+  test_decode "point", "'(1.2,3.4)'::point", Postgres::Geo::Point.new(1.2, 3.4)
   if Helper.db_version_gte(9, 4)
-    test_decode "line ", "'(1,2,3,4)'::line ", PG::Geo::Line.new(1.0, -1.0, 1.0)
-    test_decode "line ", "'1,2,3'::circle   ", PG::Geo::Circle.new(1.0, 2.0, 3.0)
+    test_decode "line ", "'(1,2,3,4)'::line ", Postgres::Geo::Line.new(1.0, -1.0, 1.0)
+    test_decode "line ", "'1,2,3'::circle   ", Postgres::Geo::Circle.new(1.0, 2.0, 3.0)
   end
-  test_decode "lseg ", "'(1,2,3,4)'::lseg ", PG::Geo::LineSegment.new(1.0, 2.0, 3.0, 4.0)
-  test_decode "box  ", "'(1,2,3,4)'::box  ", PG::Geo::Box.new(1.0, 2.0, 3.0, 4.0)
-  test_decode "path ", "'(1,2,3,4)'::path ", PG::Geo::Path.new([PG::Geo::Point.new(1.0, 2.0), PG::Geo::Point.new(3.0, 4.0)], closed: true)
-  test_decode "path ", "'[1,2,3,4,5,6]'::path", PG::Geo::Path.new([PG::Geo::Point.new(1.0, 2.0), PG::Geo::Point.new(3.0, 4.0), PG::Geo::Point.new(5.0, 6.0)], closed: false)
-  test_decode "polygon", "'1,2,3,4,5,6'::polygon", PG::Geo::Polygon.new([PG::Geo::Point.new(1.0, 2.0), PG::Geo::Point.new(3.0, 4.0), PG::Geo::Point.new(5.0, 6.0)])
+  test_decode "lseg ", "'(1,2,3,4)'::lseg ", Postgres::Geo::LineSegment.new(1.0, 2.0, 3.0, 4.0)
+  test_decode "box  ", "'(1,2,3,4)'::box  ", Postgres::Geo::Box.new(1.0, 2.0, 3.0, 4.0)
+  test_decode "path ", "'(1,2,3,4)'::path ", Postgres::Geo::Path.new([Postgres::Geo::Point.new(1.0, 2.0), Postgres::Geo::Point.new(3.0, 4.0)], closed: true)
+  test_decode "path ", "'[1,2,3,4,5,6]'::path", Postgres::Geo::Path.new([Postgres::Geo::Point.new(1.0, 2.0), Postgres::Geo::Point.new(3.0, 4.0), Postgres::Geo::Point.new(5.0, 6.0)], closed: false)
+  test_decode "polygon", "'1,2,3,4,5,6'::polygon", Postgres::Geo::Polygon.new([Postgres::Geo::Point.new(1.0, 2.0), Postgres::Geo::Point.new(3.0, 4.0), Postgres::Geo::Point.new(5.0, 6.0)])
 end
