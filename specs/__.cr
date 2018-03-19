@@ -1,8 +1,11 @@
-require "spec"
+
+require "da_spec"
+
 require "../src/postgres"
 
+extend DA_SPEC
+
 DB_URL = ENV["DATABASE_URL"]? || "postgres:///"
-PG_DB  = DB.open(DB_URL)
 
 def with_db
   Postgres.open(DB_URL) do |db|
@@ -33,9 +36,10 @@ end
 
 def test_decode(name, query, expected, file = __FILE__, line = __LINE__)
   it name, file, line do
-    value = PG_DB.query_one "select #{query}", &.read
+    value = Postgres.open(DB_URL).query_one "select #{query}", &.read
     value.should eq(expected), file, line
   end
 end
 
 # require "./*"
+require "./connection"

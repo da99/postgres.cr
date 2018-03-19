@@ -1,15 +1,15 @@
 module Postgres
   # http://www.postgresql.org/docs/current/static/protocol-error-fields.html
   struct Notice
-    getter fields : Array(Postgres::Frame::ErrorNoticeFrame::Field)
+    getter fields   : Array(Postgres::Frame::ErrorNoticeFrame::Field)
     getter severity : String
-    getter code : String
-    getter message : String
+    getter code     : String
+    getter message  : String
 
     def initialize(@fields)
       severity = ""
-      code = ""
-      message = ""
+      code     = ""
+      message  = ""
 
       fields.each do |f|
         case f.name
@@ -23,8 +23,8 @@ module Postgres
       end
 
       @severity = severity
-      @code = code
-      @message = message
+      @code     = code
+      @message  = message
     end
 
     def to_s(io : IO)

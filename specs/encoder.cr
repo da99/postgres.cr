@@ -1,17 +1,19 @@
 
 private def test_insert_and_read(datatype, value, file = __FILE__, line = __LINE__)
   it "inserts #{datatype}", file, line do
-    PG_DB.exec "drop table if exists test_table"
-    PG_DB.exec "create table test_table (v #{datatype})"
+    Postgres.open(DB_URL) { |db|
+      db.exec "drop table if exists test_table"
+      db.exec "create table test_table (v #{datatype})"
 
-    # Read casting the value
-    PG_DB.exec "insert into test_table values ($1)", [value]
-    actual_value = PG_DB.query_one "select v from test_table", as: value.class
-    actual_value.should eq(value)
+      # Read casting the value
+      db.exec "insert into test_table values ($1)", [value]
+      actual_value = db.query_one "select v from test_table", as: value.class
+      actual_value.should eq(value)
 
-    # Read without casting the value
-    actual_value = PG_DB.query_one "select v from test_table", &.read
-    actual_value.should eq(value)
+      # Read without casting the value
+      actual_value = db.query_one "select v from test_table", &.read
+      actual_value.should eq(value)
+    }
   end
 end
 

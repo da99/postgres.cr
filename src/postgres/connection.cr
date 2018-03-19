@@ -5,43 +5,36 @@ module Postgres
   class Connection
     SOCKET_SEARCH = %w(/run/postgresql/.s.PGSQL.5432 /tmp/.s.PGSQL.5432 /var/run/postgresql/.s.PGSQL.5432)
 
+    getter soc               : UNIXSocket | TCPSocket | OpenSSL::SSL::Socket::Client
+    getter pid               : Int32, secret : Int32
+    getter server_parameters : Hash(String, String)
 
-    getter   soc               : UNIXSocket | TCPSocket | OpenSSL::SSL::Socket::Client
-    getter   server_parameters : Hash(String, String)
-    getter   pid               : Int32, secret : Int32
-
-    # The host. If starts with a / it is assumed to be a local Unix socket.
-    getter host : String
-
-    # The port, defaults to 5432. It is ignored for local Unix sockets.
-    getter port     : Int32 = 5432
+    getter host     : String # The host. If starts with a / it is assumed to be a local Unix socket.
+    getter port     : Int32 = 5432 # The port, defaults to 5432. It is ignored for local Unix sockets.
     getter database : String
     getter user     : String
     getter password : String?
 
-    # SSLmode, either :prefer or :require
-    #
-    # If set to `:prefer`, ssl is attempted. If it is `:require` and ssl is not
-    # established, an error is raised
-    getter sslmode : Symbol
 
+    def initialize(
+      host     : String | Symbol,
+      port     : Int32?  = 5432,
+      database : String? = nil,
+      user     : String? = nil
+    )
+      @port     = port
+      @host     = case
+                  when host.is_a?(String) && host != "/"
+                    host
+                  when host == "/" || host.is_a?(Symbol)
+                    socket = SOCKET_SEARCH.find { |s| File.exists?(s) }
+                    (socket) ? socket : raise Exception.new("socket not found for: #{host.inspect}")
+                  else
+                    "localhost"
+                  end
 
-    def initialize(raw_uri : String)
-      uri = URI.parse
-      sslmode = nil
-      if q = uri.query
-        q.split('&').each do |pair|
-          k, v = pair.split('=')
-          sslmode = v if k == "sslmode"
-        end
-      end
-
-      @port     = (uri.port || 5432).to_i
-      @host     = default_host uri.host
-      db        = default_database uri.path
-      @database = db.starts_with?('/') ? db[1..-1] : db
-      @user     = default_user uri.user
-      @sslmode  = default_sslmode sslmode
+      @user     = user || `whoami`.chomp
+      @database =(database) ? database : @user
 
       @mutex                = Mutex.new
       @server_parameters    = Hash(String, String).new
@@ -49,29 +42,29 @@ module Postgres
       @pid                  = uninitialized Int32
       @secret               = uninitialized Int32
 
-      begin
-        if @conninfo.host[0] == '/'
-          soc = UNIXSocket.new(@conninfo.host)
-        else
-          soc = TCPSocket.new(@conninfo.host, @conninfo.port)
-        end
-        soc.sync = false
-      rescue e
-        raise ConnectionError.new("Cannot establish connection", cause: e)
-      end
-
-      @soc = soc
-      connect
+      @socket = begin
+                  socket = if @host[0] == '/'
+                             UNIXSocket.new(@host)
+                           else
+                             TCPSocket.new(@host, @port)
+                           end
+                  socket.sync = false
+                  socket
+                rescue e
+                  raise Connection_Error.new("Cannot establish connection (#{e.class})", cause: e)
+                end
     end
 
     def version
       vers = connection.server_parameters["server_version"].split('.').map(&.to_i)
       {major: vers[0], minor: vers[1], patch: vers[2]? || 0}
     end
+
     def connect
+      return
       startup_args = [
-        "user", @conninfo.user,
-        "database", @conninfo.database,
+        "user", `whoami`.chomp,
+        "database", @database,
         "application_name", "crystal",
         "client_encoding", "utf8",
       ]
@@ -88,6 +81,17 @@ module Postgres
       expect_frame Frame::ReadyForQuery
 
       @established = true
+    end # def connect
+
+    def connection_pool_options(params : HTTP::Params)
+      {
+        initial_pool_size:  params.fetch("initial_pool_size", 1).to_i,
+        max_pool_size:      params.fetch("max_pool_size", 0).to_i,
+        max_idle_pool_size: params.fetch("max_idle_pool_size", 1).to_i,
+        checkout_timeout:   params.fetch("checkout_timeout", 5.0).to_f,
+        retry_attempts:     params.fetch("retry_attempts", 1).to_i,
+        retry_delay:        params.fetch("retry_delay", 1.0).to_f,
+      }
     end
 
     def startup(args)
@@ -107,38 +111,6 @@ module Postgres
       }
     end
 
-    private def default_host(h)
-      return h if h
-
-      SOCKET_SEARCH.each do |s|
-        return s if File.exists?(s)
-      end
-
-      "localhost"
-    end
-
-    private def default_database(db)
-      if db && db != "/"
-        db
-      else
-        `whoami`.chomp
-      end
-    end
-
-    private def default_user(u)
-      u || `whoami`.chomp
-    end
-
-    private def default_sslmode(mode)
-      case mode
-      when nil, :prefer, "prefer"
-        :prefer
-      when :require, "require"
-        :require
-      else
-        raise ArgumentError.new("sslmode #{mode} not supported")
-      end
-    end
     # =============================================================================
     # Write/Read:
     # =============================================================================
@@ -235,11 +207,11 @@ module Postgres
         handle_error frame
         true
       elsif frame.is_a?(Frame::NotificationResponse)
-        handle_notification frame
-        true
+        raise Error.new("Notification Response received.")
+
       elsif frame.is_a?(Frame::NoticeResponse)
-        handle_notice frame
-        true
+        raise Error.new("Notice Response received.")
+
       elsif frame.is_a?(Frame::ParameterStatus)
         handle_parameter frame
         true
@@ -250,7 +222,7 @@ module Postgres
 
     private def handle_error(error_frame : Frame::ErrorResponse)
       expect_frame Frame::ReadyForQuery if @established
-      raise PQError.new(error_frame.fields)
+      raise PG_Error.new(error_frame.fields)
     end
 
     private def handle_parameter(frame : Frame::ParameterStatus)
@@ -258,12 +230,12 @@ module Postgres
       case frame.key
       when "client_encoding"
         if frame.value != "UTF8"
-          raise ConnectionError.new(
+          raise Connection_Error.new(
             "Only UTF8 is supported for client_encoding, got: #{frame.value.inspect}")
         end
       when "integer_datetimes"
         if frame.value != "on"
-          raise ConnectionError.new(
+          raise Connection_Error.new(
             "Only on is supported for integer_datetimes, got: #{frame.value.inspect}")
         end
       end
@@ -273,27 +245,11 @@ module Postgres
       case auth_frame.type
       when Frame::Authentication::Type::OK
         # no op
-      when Frame::Authentication::Type::CleartextPassword
-        raise "Cleartext auth is not supported"
-      when Frame::Authentication::Type::MD5Password
-        handle_auth_md5 auth_frame.body
       else
-        raise ConnectionError.new(
+        raise Connection_Error.new(
           "unsupported authentication method: #{auth_frame.type}"
         )
       end
-    end
-
-    private def handle_auth_md5(salt)
-      inner = Digest::MD5.hexdigest("#{@conninfo.password}#{@conninfo.user}")
-
-      pass = Digest::MD5.hexdigest do |ctx|
-        ctx.update(inner.to_unsafe, inner.bytesize.to_u32)
-        ctx.update(salt.to_unsafe, salt.bytesize.to_u32)
-      end
-
-      send_password_message "md5#{pass}"
-      expect_frame Frame::Authentication
     end
 
     def read_next_row_start
